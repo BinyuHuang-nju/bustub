@@ -25,6 +25,9 @@
 
 namespace bustub {
 
+template <typename T>
+class TrieNodeWithValue;
+
 /**
  * TrieNode is a generic container for any node in Trie.
  */
@@ -89,7 +92,12 @@ class TrieNode {
    *
    * @return True if this trie node has any child node, false if it has no child node.
    */
-  bool HasChildren() const { return !children_.empty(); }
+  bool HasChildren() const {
+    for (auto iter = children_.begin(); iter != children_.end(); iter++) {
+      if (iter->second != nullptr) return true;
+    }
+    return false;
+  }
 
   /**
    * TODO(P0): Add implementation
@@ -166,6 +174,24 @@ class TrieNode {
       LOG_DEBUG("TrieNode: Remove child node with key %c.", key_char);
       children_.erase(key_char);
     }
+  }
+
+  /**
+   * @brief Update child node from TrieNode type to TrieNodeWithValue type.
+   *
+   * @param key_char Key char of child node to be removed
+   * @param value Value to be inserted
+   * @return True if update succeeds, false if value already exists
+   */
+  template <typename T>
+  bool UpdateChildNode(char key_char, T value) {
+    LOG_DEBUG("TrieNode: update child node with key %c.", key_char);
+    if (is_end_) return false;
+    if (!HasChild(key_char)) return false;
+    std::unique_ptr<TrieNode> child = std::move(children_[key_char]);
+    std::unique_ptr<TrieNodeWithValue<T>> new_child(new TrieNodeWithValue<T>(key_char, value));
+    children_[key_char] = std::move(new_child);
+    return true;
   }
 
   /**
@@ -303,8 +329,12 @@ class Trie {
    */
   template <typename T>
   bool Insert(const std::string &key, T value) {
-    LOG_DEBUG("Trie: Insert key %s.", key.c_str());
-    if (key.length() == 0) return false;
+    latch_.WLock();
+    LOG_DEBUG("Trie: Insert key %s, its len %lu.", key.c_str(), key.length());
+    if (key.length() == 0) {
+      latch_.WUnlock();
+      return false;
+    }
     std::unique_ptr<TrieNode> *pre_node = nullptr;
     std::unique_ptr<TrieNode> *cur_node = &root_;
     bool not_exists = false;
@@ -318,7 +348,7 @@ class Trie {
         not_exists = true;
       }
       pre_node = cur_node;
-      cur_node = (*cur_node)->GetChildNode(k);
+      cur_node = (*cur_node)->GetChildNode(k); 
     }
     /** if not exists, cur_node is father node of the terminal node;
         if exists, cur_node is the terminal node.
@@ -326,22 +356,28 @@ class Trie {
     char k = key[key_len - 1];
     // case 1. TrieNode with this ending character does not exist
     if (not_exists) {
-      std::unique_ptr<TrieNodeWithValue<T>> child(new TrieNodeWithValue<T>(k, value));
-      (*cur_node)->InsertChildNode(k, std::move(child));
+      // std::unique_ptr<TrieNodeWithValue<T>> child(new TrieNodeWithValue<T>(k, value));
+      // (*cur_node)->InsertChildNode(k, std::move(child));
+      assert(pre_node != nullptr && cur_node == nullptr);
+      (*pre_node)->InsertChildNode(k, std::make_unique<TrieNodeWithValue<T>>(k, value));
       LOG_DEBUG("Trie: Insert succeeds since there is no this key %s in TrieTree.", key.c_str());
+      latch_.WUnlock();
       return true;
     }
+    assert(pre_node != nullptr && cur_node != nullptr);
     // case 2. the terminal node is already a TrieNodeWithValue
     if ((*cur_node)->IsEndNode()) {
       LOG_DEBUG("Trie: Insert fails since there is this key %s in TrieTree.", key.c_str());
+      latch_.WUnlock();
       return false;
     }
     // case 3. the terminal node is a TrieNode
-    assert(pre_node != nullptr);
-    (*pre_node)->RemoveChildNode(k);
-    std::unique_ptr<TrieNodeWithValue<T>> child(new TrieNodeWithValue<T>(std::move(*cur_node->get()), value));
-    (*pre_node)->InsertChildNode(k, std::move(child));
+    // (*pre_node)->RemoveChildNode(k);
+    // std::unique_ptr<TrieNodeWithValue<T>> child(new TrieNodeWithValue<T>(std::move(*cur_node->get()), value));
+    // (*pre_node)->InsertChildNode(k, std::move(child));
+    (*pre_node)->template UpdateChildNode(k, value);
     LOG_DEBUG("Trie: Insert succeeds since the node of key %s is not a terminal node.", key.c_str());
+    latch_.WUnlock();
     return true;
   }
 
@@ -362,7 +398,22 @@ class Trie {
    * @param key Key used to traverse the trie and find correct node
    * @return True if key exists and is removed, false otherwise
    */
-  bool Remove(const std::string &key) { return false; }
+  bool Remove(const std::string &key) {
+    latch_.WLock();
+    LOG_DEBUG("Trie: Remove key %s.", key.c_str());
+    size_t key_len = key.length();
+    if (key_len == 0) {
+      latch_.WUnlock();
+      return false;
+    }
+    std::unique_ptr<TrieNode> *cur_node = &root_;
+    bool success = false;
+    Delete(cur_node, key, 0, key_len, success);
+    std::string res = success? "remove succeeds": "remove fails";
+    LOG_DEBUG("Trie: Remove key %s result: %s", key.c_str(), res.c_str());
+    latch_.WUnlock();
+    return success;
+  }
 
   /**
    * TODO(P0): Add implementation
@@ -384,8 +435,72 @@ class Trie {
    */
   template <typename T>
   T GetValue(const std::string &key, bool *success) {
+    latch_.RLock();
+    LOG_DEBUG("Trie: GetValue key(%s).", key.c_str());
     *success = false;
-    return {};
+    if (key.length() == 0) {
+      latch_.RUnlock();
+      return {};
+    }
+    std::unique_ptr<TrieNode> *cur_node = &root_;
+    for (char k: key) {
+      if (!(*cur_node)->HasChild(k)) {
+        latch_.RUnlock();
+        return {};
+      }
+      cur_node = (*cur_node)->GetChildNode(k);
+    }
+    assert(cur_node != nullptr);
+    auto casted = dynamic_cast<TrieNodeWithValue<T>*>((*cur_node).get());
+    if (casted == nullptr) {
+      latch_.RUnlock();
+      return {};
+    }
+    *success = true;
+    T res = casted->GetValue();
+    latch_.RUnlock();
+    return res;
+  }
+
+ private:
+  /**
+   * @brief Delete key value pair from the trie.
+
+   * @param p_node current pointer of node of recursive function
+   * @param key Key used to traverse the trie and find correct node
+   * @param depth current depth of recursive function
+   * @param len length of key
+   * @param success if we find the corresponding node
+
+   * @return True if need to delete child node and check whether delete myself
+   */
+  bool Delete(std::unique_ptr<TrieNode> *p_node, const std::string& key, size_t depth, size_t len, bool &success) {
+    success = false;
+    if (p_node == nullptr) return false;
+    LOG_DEBUG("Trie: Delete key %s at depth %lu, with current node key_char %c.", key.c_str(), depth, (*p_node)->GetKeyChar());
+    assert(depth == 0 || (*p_node)->GetKeyChar() == key[depth - 1]);    
+    if (depth == len) {
+      if ((*p_node)->IsEndNode()) {
+        (*p_node)->SetEndNode(false);
+        success = true;
+      }
+      if (!(*p_node)->HasChildren()) {
+        *p_node = nullptr;
+        return true;
+      }
+      return false;
+    }
+    char k = key[depth];
+    if (!(*p_node)->HasChild(k)) return false;
+    bool need_to_delete = Delete((*p_node)->GetChildNode(k), key, depth + 1, len, success);
+    if (need_to_delete) {
+      (*p_node)->RemoveChildNode(k);
+      if (!(*p_node)->IsEndNode() && !(*p_node)->HasChildren()) {
+        *p_node = nullptr;
+        return true;
+      }
+    }
+    return false;
   }
 };
 }  // namespace bustub

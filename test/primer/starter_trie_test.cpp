@@ -19,6 +19,7 @@
 #include "common/exception.h"
 #include "gtest/gtest.h"
 #include "primer/p0_trie.h"
+#include "common/logger.h"
 
 namespace bustub {
 
@@ -82,8 +83,10 @@ TEST(StarterTest, TrieInsertTest) {
   {
     Trie trie;
     trie.Insert<std::string>("abc", "d");
+    LOG_DEBUG("TEST: Trie insert (abc, d) Reached.");
     bool success = true;
     auto val = trie.GetValue<std::string>("abc", &success);
+    LOG_DEBUG("TEST: Trie GetValue (abc) Reached.");
     EXPECT_EQ(success, true);
     EXPECT_EQ(val, "d");
   }
@@ -92,8 +95,10 @@ TEST(StarterTest, TrieInsertTest) {
   {
     Trie trie;
     auto success = trie.Insert<std::string>("", "d");
+    LOG_DEBUG("TEST: Trie insert (, d) Reached.");
     EXPECT_EQ(success, false);
     trie.GetValue<std::string>("", &success);
+    LOG_DEBUG("TEST: Trie GetValue () Reached.");
     EXPECT_EQ(success, false);
   }
 
@@ -102,11 +107,14 @@ TEST(StarterTest, TrieInsertTest) {
     Trie trie;
     bool success = trie.Insert<int>("abc", 5);
     EXPECT_EQ(success, true);
+    LOG_DEBUG("TEST: Trie insert (abc, 5) Reached.");
 
     success = trie.Insert<int>("abc", 6);
     EXPECT_EQ(success, false);
+    LOG_DEBUG("TEST: Trie insert (abc, 6) Reached.");
 
     auto val = trie.GetValue<int>("abc", &success);
+    LOG_DEBUG("TEST: Trie GetValue (abc) Reached.");
     EXPECT_EQ(success, true);
     EXPECT_EQ(val, 5);
   }
@@ -127,9 +135,18 @@ TEST(StarterTest, TrieInsertTest) {
     trie.GetValue<int>("aaaa", &success);
     EXPECT_EQ(success, false);
   }
+
+  // My test: Insert 'abc', then insert 'ab'
+  {
+    Trie trie;
+    bool success = trie.Insert<int>("abc", 5);
+    EXPECT_EQ(success, true);
+    success = trie.Insert<std::string>("ab", "val");
+    EXPECT_EQ(success, true);
+  }
 }
 
-TEST(StarterTrieTest, DISABLED_RemoveTest) {
+TEST(StarterTrieTest, RemoveTest) {
   {
     Trie trie;
     bool success = trie.Insert<int>("a", 5);
@@ -162,7 +179,7 @@ TEST(StarterTrieTest, DISABLED_RemoveTest) {
   }
 }
 
-TEST(StarterTrieTest, DISABLED_ConcurrentTest1) {
+TEST(StarterTrieTest, ConcurrentTest1) {
   Trie trie;
   constexpr int num_words = 1000;
   constexpr int num_bits = 10;
