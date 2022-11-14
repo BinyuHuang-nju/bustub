@@ -217,7 +217,7 @@ class TrieNodeWithValue : public TrieNode {
    * @param value
    */
   TrieNodeWithValue(TrieNode &&trieNode, T value) : TrieNode(std::move(trieNode)) {
-    LOG_DEBUG("TrieNodeWithValue: Create a new terminal trie node from a TrieNode, with key %c, value %s.", key_char_, value);
+    LOG_DEBUG("TrieNodeWithValue: Create a new terminal trie node from a TrieNode, with key %c.", key_char_);
     value_ = value;
     is_end_ = true;
   }
@@ -235,8 +235,8 @@ class TrieNodeWithValue : public TrieNode {
    * @param key_char Key char of this node
    * @param value Value of this node
    */
-  TrieNodeWithValue(char key_char, T value): TrieNode(key_char) {
-    LOG_DEBUG("TrieNodeWithValue: Create a new terminal trie node, with key %c, value %s.", key_char, value);
+  TrieNodeWithValue(char key_char, T value) : TrieNode(key_char) {
+    LOG_DEBUG("TrieNodeWithValue: Create a new terminal trie node, with key %c.", key_char);
     value_ = value;
     is_end_ = true;
   }
@@ -272,7 +272,8 @@ class Trie {
    * @brief Construct a new Trie object. Initialize the root node with '\0'
    * character.
    */
-  Trie() = default;
+  // Trie() = default;
+  Trie() { root_ = std::make_unique<TrieNode>('\0'); }
 
   /**
    * TODO(P0): Add implementation
@@ -302,12 +303,46 @@ class Trie {
    */
   template <typename T>
   bool Insert(const std::string &key, T value) {
-    LOG_DEBUG("Trie: Insert one pair of (key %s, value %s).", key, value);
+    LOG_DEBUG("Trie: Insert key %s.", key.c_str());
     if (key.length() == 0) return false;
-    std::unique_ptr<TrieNode> *curNode = &root_;
-    for (char k: key) {
-      if (curNode->Has)
+    std::unique_ptr<TrieNode> *pre_node = nullptr;
+    std::unique_ptr<TrieNode> *cur_node = &root_;
+    bool not_exists = false;
+    size_t key_len = key.length();
+    for (size_t i = 0; i < key_len; i++) {
+      char k = key[i];
+      if (!(*cur_node)->HasChild(k)) {
+        if (i < key_len - 1) {
+          (*cur_node)->InsertChildNode(k, std::make_unique<TrieNode>(k));
+        }
+        not_exists = true;
+      }
+      pre_node = cur_node;
+      cur_node = (*cur_node)->GetChildNode(k);
     }
+    /** if not exists, cur_node is father node of the terminal node;
+        if exists, cur_node is the terminal node.
+    */
+    char k = key[key_len - 1];
+    // case 1. TrieNode with this ending character does not exist
+    if (not_exists) {
+      std::unique_ptr<TrieNodeWithValue<T>> child(new TrieNodeWithValue<T>(k, value));
+      (*cur_node)->InsertChildNode(k, std::move(child));
+      LOG_DEBUG("Trie: Insert succeeds since there is no this key %s in TrieTree.", key.c_str());
+      return true;
+    }
+    // case 2. the terminal node is already a TrieNodeWithValue
+    if ((*cur_node)->IsEndNode()) {
+      LOG_DEBUG("Trie: Insert fails since there is this key %s in TrieTree.", key.c_str());
+      return false;
+    }
+    // case 3. the terminal node is a TrieNode
+    assert(pre_node != nullptr);
+    (*pre_node)->RemoveChildNode(k);
+    std::unique_ptr<TrieNodeWithValue<T>> child(new TrieNodeWithValue<T>(std::move(*cur_node->get()), value));
+    (*pre_node)->InsertChildNode(k, std::move(child));
+    LOG_DEBUG("Trie: Insert succeeds since the node of key %s is not a terminal node.", key.c_str());
+    return true;
   }
 
   /**
