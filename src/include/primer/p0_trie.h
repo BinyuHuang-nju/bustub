@@ -348,7 +348,7 @@ class Trie {
         not_exists = true;
       }
       pre_node = cur_node;
-      cur_node = (*cur_node)->GetChildNode(k); 
+      cur_node = (*cur_node)->GetChildNode(k);
     }
     /** if not exists, cur_node is father node of the terminal node;
         if exists, cur_node is the terminal node.
@@ -409,7 +409,7 @@ class Trie {
     std::unique_ptr<TrieNode> *cur_node = &root_;
     bool success = false;
     Delete(cur_node, key, 0, key_len, success);
-    std::string res = success? "remove succeeds": "remove fails";
+    std::string res = success ? "remove succeeds" : "remove fails";
     LOG_DEBUG("Trie: Remove key %s result: %s", key.c_str(), res.c_str());
     latch_.WUnlock();
     return success;
@@ -443,7 +443,7 @@ class Trie {
       return {};
     }
     std::unique_ptr<TrieNode> *cur_node = &root_;
-    for (char k: key) {
+    for (char k : key) {
       if (!(*cur_node)->HasChild(k)) {
         latch_.RUnlock();
         return {};
@@ -451,7 +451,7 @@ class Trie {
       cur_node = (*cur_node)->GetChildNode(k);
     }
     assert(cur_node != nullptr);
-    auto casted = dynamic_cast<TrieNodeWithValue<T>*>((*cur_node).get());
+    auto casted = dynamic_cast<TrieNodeWithValue<T> *>((*cur_node).get());
     if (casted == nullptr) {
       latch_.RUnlock();
       return {};
@@ -474,11 +474,12 @@ class Trie {
 
    * @return True if need to delete child node and check whether delete myself
    */
-  bool Delete(std::unique_ptr<TrieNode> *p_node, const std::string& key, size_t depth, size_t len, bool &success) {
+  bool Delete(std::unique_ptr<TrieNode> *p_node, const std::string &key, size_t depth, size_t len, bool &success) {
     success = false;
     if (p_node == nullptr) return false;
-    LOG_DEBUG("Trie: Delete key %s at depth %lu, with current node key_char %c.", key.c_str(), depth, (*p_node)->GetKeyChar());
-    assert(depth == 0 || (*p_node)->GetKeyChar() == key[depth - 1]);    
+    LOG_DEBUG("Trie: Delete key %s at depth %lu, with current node key_char %c.", key.c_str(), depth,
+              (*p_node)->GetKeyChar());
+    assert(depth == 0 || (*p_node)->GetKeyChar() == key[depth - 1]);
     if (depth == len) {
       if ((*p_node)->IsEndNode()) {
         (*p_node)->SetEndNode(false);

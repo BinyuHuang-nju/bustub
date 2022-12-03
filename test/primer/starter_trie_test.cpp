@@ -17,9 +17,9 @@
 #include <thread>  // NOLINT
 
 #include "common/exception.h"
+#include "common/logger.h"
 #include "gtest/gtest.h"
 #include "primer/p0_trie.h"
-#include "common/logger.h"
 
 namespace bustub {
 

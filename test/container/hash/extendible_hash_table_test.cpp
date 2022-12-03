@@ -5,22 +5,32 @@
 #include <memory>
 #include <thread>  // NOLINT
 
+#include "common/logger.h"
 #include "container/hash/extendible_hash_table.h"
 #include "gtest/gtest.h"
 
 namespace bustub {
 
-TEST(ExtendibleHashTableTest, DISABLED_SampleTest) {
+TEST(ExtendibleHashTableTest, SampleTest) {
   auto table = std::make_unique<ExtendibleHashTable<int, std::string>>(2);
 
+  LOG_DEBUG("SampleTest: Now we call Insert(1, 'a').");
   table->Insert(1, "a");
+  LOG_DEBUG("SampleTest: Now we call Insert(2, 'b').");
   table->Insert(2, "b");
+  LOG_DEBUG("SampleTest: Now we call Insert(3, 'c').");
   table->Insert(3, "c");
+  LOG_DEBUG("SampleTest: Now we call Insert(4, 'd').");
   table->Insert(4, "d");
+  LOG_DEBUG("SampleTest: Now we call Insert(5, 'e').");
   table->Insert(5, "e");
+  LOG_DEBUG("SampleTest: Now we call Insert(6, 'f').");
   table->Insert(6, "f");
+  LOG_DEBUG("SampleTest: Now we call Insert(7, 'g').");
   table->Insert(7, "g");
+  LOG_DEBUG("SampleTest: Now we call Insert(8, 'h').");
   table->Insert(8, "h");
+  LOG_DEBUG("SampleTest: Now we call Insert(9, 'i').");
   table->Insert(9, "i");
   EXPECT_EQ(2, table->GetLocalDepth(0));
   EXPECT_EQ(3, table->GetLocalDepth(1));

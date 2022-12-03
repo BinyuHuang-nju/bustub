@@ -23,6 +23,8 @@
 #include <utility>
 #include <vector>
 
+#include "common/logger.h"
+#include "common/rwlatch.h"
 #include "container/hash/hash_table.h"
 
 namespace bustub {
@@ -110,7 +112,7 @@ class ExtendibleHashTable : public HashTable<K, V> {
    */
   class Bucket {
    public:
-    explicit Bucket(size_t size, int depth = 0);
+    explicit Bucket(size_t size, int depth = 0, size_t prefix = 0);
 
     /** @brief Check if a bucket is full. */
     inline auto IsFull() const -> bool { return list_.size() == size_; }
@@ -118,10 +120,35 @@ class ExtendibleHashTable : public HashTable<K, V> {
     /** @brief Get the local depth of the bucket. */
     inline auto GetDepth() const -> int { return depth_; }
 
+    inline auto GetPrefix() const -> size_t { return prefix_; }
+
     /** @brief Increment the local depth of a bucket. */
-    inline void IncrementDepth() { depth_++; }
+    inline void IncrementDepth() {
+      depth_++;
+      prefix_ <<= 1;
+    }
 
     inline auto GetItems() -> std::list<std::pair<K, V>> & { return list_; }
+
+    inline void GetWriteLock() { latch_.WLock(); }
+
+    inline void ReleaseWriteLock() { latch_.WUnlock(); }
+
+    inline void GetReadLock() { latch_.RLock(); }
+
+    inline void ReleaseReadLock() { latch_.RUnlock(); }
+
+    inline auto IsOverflow() const -> bool { return list_.size() > size_; }
+
+    inline auto GetCopiedItems() -> std::list<std::pair<K, V>> {
+      std::list<std::pair<K, V>> res;
+      for (auto iter = list_.begin(); iter != list_.end(); iter++) {
+        res.push_back(*iter);
+      }
+      return res;
+    }
+
+    inline void ClearItems() { list_.clear(); }
 
     /**
      *
@@ -162,6 +189,8 @@ class ExtendibleHashTable : public HashTable<K, V> {
     size_t size_;
     int depth_;
     std::list<std::pair<K, V>> list_;
+    size_t prefix_;
+    ReaderWriterLatch latch_;  // rwlock of a certain bucket
   };
 
  private:
@@ -192,6 +221,12 @@ class ExtendibleHashTable : public HashTable<K, V> {
    * @return The entry index in the directory.
    */
   auto IndexOf(const K &key) -> size_t;
+
+  /**
+   *
+   * @return
+   */
+   auto PairIndex(size_t bucket_no, int local_depth) -> size_t;
 
   auto GetGlobalDepthInternal() const -> int;
   auto GetLocalDepthInternal(int dir_index) const -> int;
