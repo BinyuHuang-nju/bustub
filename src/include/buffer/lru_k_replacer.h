@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "common/config.h"
+#include "common/logger.h"
 #include "common/macros.h"
 
 namespace bustub {
@@ -52,7 +53,7 @@ class LRUKReplacer {
    *
    * @brief Destroys the LRUReplacer.
    */
-  ~LRUKReplacer() = default;
+  ~LRUKReplacer();
 
   /**
    * TODO(P1): Add implementation
@@ -135,11 +136,39 @@ class LRUKReplacer {
  private:
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
+  struct ListNode {
+    frame_id_t frame_id_;
+    size_t access_times_;
+    bool evictable_;
+    ListNode *prev_, *next_;
+
+    ListNode() : frame_id_(-1), access_times_(0), evictable_(false), prev_(nullptr), next_(nullptr) {}
+
+    explicit ListNode(frame_id_t id, ListNode *pre = nullptr, ListNode *nxt = nullptr)
+        : frame_id_(id), access_times_(0), evictable_(false), prev_(pre), next_(nxt) {}
+  };
+
+  auto GetNode(frame_id_t frame_id) -> ListNode*;
+
+  void InsertNode(ListNode *dummy, ListNode *newNode);
+
+  void MoveNodeToHead(ListNode *dummy, ListNode *node);
+
+  void EvictNodeFromList(ListNode *node);
+
+  auto GetFirstEvictableNode(bool in_history) -> ListNode*;
+
   [[maybe_unused]] size_t current_timestamp_{0};
-  [[maybe_unused]] size_t curr_size_{0};
-  [[maybe_unused]] size_t replacer_size_;
-  [[maybe_unused]] size_t k_;
+  size_t curr_size_{0};   // size of evictable frames
+  size_t replacer_size_;  // size of buffer pool, namely all frames
+  size_t k_;
   std::mutex latch_;
+  ListNode *history_dummy_;
+  std::unordered_map<frame_id_t, ListNode*> history_frames_;
+  size_t history_frame_size_{0};
+  ListNode *buffer_dummy_;
+  std::unordered_map<frame_id_t, ListNode*> buffer_frames_;
+  size_t buffer_frame_size_{0};
 };
 
 }  // namespace bustub

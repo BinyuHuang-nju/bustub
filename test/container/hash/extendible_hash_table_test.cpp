@@ -52,6 +52,20 @@ TEST(ExtendibleHashTableTest, SampleTest) {
   EXPECT_FALSE(table->Remove(20));
 }
 
+TEST(ExtendibleHashTableTest, ContinuousInsertTest) {
+  auto table = std::make_unique<ExtendibleHashTable<int, std::string>>(2);
+  LOG_DEBUG("SampleTest: Now we call Insert(1, 'a').");
+  table->Insert(1, "a");
+  LOG_DEBUG("SampleTest: Now we call Insert(2, 'b').");
+  table->Insert(2, "b");
+  LOG_DEBUG("SampleTest: Now we call Insert(17, 'c').");
+  table->Insert(17, "c");
+  LOG_DEBUG("SampleTest: Now we call Insert(4, 'd').");
+  table->Insert(4, "d");
+  LOG_DEBUG("SampleTest: Now we call Insert(33, 'e').");
+  table->Insert(33, "e");
+}
+
 TEST(ExtendibleHashTableTest, DISABLED_ConcurrentInsertTest) {
   const int num_runs = 50;
   const int num_threads = 3;
