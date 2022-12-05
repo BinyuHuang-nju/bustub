@@ -148,7 +148,7 @@ class LRUKReplacer {
         : frame_id_(id), access_times_(0), evictable_(false), prev_(pre), next_(nxt) {}
   };
 
-  auto GetNode(frame_id_t frame_id) -> ListNode*;
+  auto GetNode(frame_id_t frame_id) -> ListNode *;
 
   void InsertNode(ListNode *dummy, ListNode *newNode);
 
@@ -156,7 +156,7 @@ class LRUKReplacer {
 
   void EvictNodeFromList(ListNode *node);
 
-  auto GetFirstEvictableNode(bool in_history) -> ListNode*;
+  auto GetFirstEvictableNode(bool in_history) -> ListNode *;
 
   [[maybe_unused]] size_t current_timestamp_{0};
   size_t curr_size_{0};   // size of evictable frames
@@ -164,11 +164,13 @@ class LRUKReplacer {
   size_t k_;
   std::mutex latch_;
   ListNode *history_dummy_;
-  std::unordered_map<frame_id_t, ListNode*> history_frames_;
+  std::unordered_map<frame_id_t, ListNode *> history_frames_;
   size_t history_frame_size_{0};
   ListNode *buffer_dummy_;
-  std::unordered_map<frame_id_t, ListNode*> buffer_frames_;
+  std::unordered_map<frame_id_t, ListNode *> buffer_frames_;
   size_t buffer_frame_size_{0};
+
+  const bool LOG_ENABLE = false;
 };
 
 }  // namespace bustub

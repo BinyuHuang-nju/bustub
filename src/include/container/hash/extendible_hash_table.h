@@ -203,6 +203,8 @@ class ExtendibleHashTable : public HashTable<K, V> {
   mutable std::mutex latch_;
   std::vector<std::shared_ptr<Bucket>> dir_;  // The directory of the hash table
 
+  const bool LOG_ENABLE = false;
+
   // The following functions are completely optional, you can delete them if you have your own ideas.
 
   /**
@@ -226,7 +228,7 @@ class ExtendibleHashTable : public HashTable<K, V> {
    *
    * @return
    */
-   auto PairIndex(size_t bucket_no, int local_depth) -> size_t;
+  auto PairIndex(size_t bucket_no, int local_depth) -> size_t;
 
   auto GetGlobalDepthInternal() const -> int;
   auto GetLocalDepthInternal(int dir_index) const -> int;

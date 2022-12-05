@@ -84,7 +84,9 @@ auto ExtendibleHashTable<K, V>::Find(const K &key, V &value) -> bool {
   std::shared_ptr<Bucket> bucket = dir_[idx];
   bucket->GetReadLock();
   latch_.unlock();
-  LOG_DEBUG("ExtendibleHashTable: Find <k, v> with bucket index %zu.", idx);
+  if (LOG_ENABLE) {
+    LOG_DEBUG("ExtendibleHashTable: Find <k, v> with bucket index %zu.", idx);
+  }
   return bucket->Find(key, value);
 }
 
@@ -96,7 +98,9 @@ auto ExtendibleHashTable<K, V>::Remove(const K &key) -> bool {
   std::shared_ptr<Bucket> bucket = dir_[idx];
   bucket->GetWriteLock();
   latch_.unlock();
-  LOG_DEBUG("ExtendibleHashTable: Remove <k, v> with bucket index %zu.", idx);
+  if (LOG_ENABLE) {
+    LOG_DEBUG("ExtendibleHashTable: Remove <k, v> with bucket index %zu.", idx);
+  }
   return bucket->Remove(key);
 }
 
@@ -106,13 +110,17 @@ void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
   bool complete = false;
   while (!complete) {
     size_t bucket_no = IndexOf(key);
-    LOG_DEBUG("ExtendibleHashTable: Insert into bucket with index %zu.", bucket_no);
+    if (LOG_ENABLE) {
+      LOG_DEBUG("ExtendibleHashTable: Insert into bucket with index %zu.", bucket_no);
+    }
     std::shared_ptr<Bucket> bucket = dir_[bucket_no];
     bucket->GetWriteLock();
     bool success = bucket->Insert(key, value);
     if (!success) {
-      LOG_DEBUG("ExtendibleHashTable: Insert bucket with index %zu and local depth %d is full.", bucket_no,
-                bucket->GetDepth());
+      if (LOG_ENABLE) {
+        LOG_DEBUG("ExtendibleHashTable: Insert bucket with index %zu and local depth %d is full.", bucket_no,
+                  bucket->GetDepth());
+      }
       bucket->IncrementDepth();
       int local_depth = bucket->GetDepth();
       if (local_depth > global_depth_) {
@@ -120,7 +128,9 @@ void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
           dir_.push_back(dir_[i]);
         }
         global_depth_++;
-        LOG_DEBUG("ExtendibleHashTable: Global depth increments to %d for local depth increments.", global_depth_);
+        if (LOG_ENABLE) {
+          LOG_DEBUG("ExtendibleHashTable: Global depth increments to %d for local depth increments.", global_depth_);
+        }
       }
       size_t pair_index = PairIndex(bucket_no, local_depth);
       dir_[pair_index] = std::make_shared<Bucket>(bucket_size_, local_depth);
@@ -130,18 +140,24 @@ void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
       size_t index_diff = 1 << local_depth;
       size_t dir_size = 1 << global_depth_;
       for (int i = pair_index - index_diff; i >= 0; i -= index_diff) {
-        LOG_DEBUG("ExtendibleHashTable: directory[%d] points to directory[%zu].", i, pair_index);
+        if (LOG_ENABLE) {
+          LOG_DEBUG("ExtendibleHashTable: directory[%d] points to directory[%zu].", i, pair_index);
+        }
         dir_[i] = dir_[pair_index];
       }
       for (size_t i = pair_index + index_diff; i < dir_size; i += index_diff) {
-        LOG_DEBUG("ExtendibleHashTable: directory[%zu] points to directory[%zu].", i, pair_index);
+        if (LOG_ENABLE) {
+          LOG_DEBUG("ExtendibleHashTable: directory[%zu] points to directory[%zu].", i, pair_index);
+        }
         dir_[i] = dir_[pair_index];
       }
       for (auto iter = itemsToInsert.begin(); iter != itemsToInsert.end(); iter++) {
         size_t cur_bucket_no = IndexOf((*iter).first);
         dir_[cur_bucket_no]->GetWriteLock();
-        LOG_DEBUG("ExtendibleHashTable: For split, insert into bucket with index %zu and depth %d.", cur_bucket_no,
-                  dir_[cur_bucket_no]->GetDepth());
+        if (LOG_ENABLE) {
+          LOG_DEBUG("ExtendibleHashTable: For split, insert into bucket with index %zu and depth %d.", cur_bucket_no,
+                    dir_[cur_bucket_no]->GetDepth());
+        }
         if (!dir_[cur_bucket_no]->Insert((*iter).first, (*iter).second)) {
           LOG_WARN("ExtendibleHashTable: Split bucket but insert fail.");
         }
@@ -254,12 +270,12 @@ auto ExtendibleHashTable<K, V>::Bucket::Find(const K &key, V &value) -> bool {
     if (iter->first == key) {
       value = iter->second;
       latch_.RUnlock();
-      LOG_DEBUG("Bucket: Find key success.");
+      // LOG_DEBUG("Bucket: Find key success.");
       return true;
     }
   }
   latch_.RUnlock();
-  LOG_DEBUG("Bucket: Find key fail.");
+  // LOG_DEBUG("Bucket: Find key fail.");
   return false;
 }
 
@@ -272,12 +288,12 @@ auto ExtendibleHashTable<K, V>::Bucket::Remove(const K &key) -> bool {
     if (iter->first == key) {
       list_.erase(iter);
       latch_.WUnlock();
-      LOG_DEBUG("Bucket: Remove key success.");
+      // LOG_DEBUG("Bucket: Remove key success.");
       return true;
     }
   }
   latch_.WUnlock();
-  LOG_DEBUG("Bucket: Remove key fail.");
+  // LOG_DEBUG("Bucket: Remove key fail.");
   return false;
 }
 
@@ -287,22 +303,22 @@ auto ExtendibleHashTable<K, V>::Bucket::Insert(const K &key, const V &value) -> 
   // to ensure in one Insert of hash table, one or more Inserts of Bucket
   // are locked without any other operations exist in the middle.
   if (IsOverflow()) {
-    LOG_WARN("Bucket: Before Insert size overflow.");
+    // LOG_WARN("Bucket: Before Insert size overflow.");
     return false;
   }
   for (auto iter = list_.begin(); iter != list_.end(); iter++) {
     if (iter->first == key) {
-      LOG_DEBUG("Bucket: Insert <k, v> and k already exists in bucket.");
+      // LOG_DEBUG("Bucket: Insert <k, v> and k already exists in bucket.");
       (*iter).second = value;
       return true;
     }
   }
   if (IsFull()) {
-    LOG_DEBUG("Bucket: Before Insert size full.");
+    // LOG_DEBUG("Bucket: Before Insert size full.");
     return false;
   }
   list_.push_back(std::make_pair(key, value));
-  LOG_DEBUG("Bucket: Insert <k, v> success, current num %zu.", list_.size());
+  // LOG_DEBUG("Bucket: Insert <k, v> success, current num %zu.", list_.size());
   return true;
 }
 

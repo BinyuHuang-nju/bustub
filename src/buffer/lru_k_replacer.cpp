@@ -48,7 +48,9 @@ LRUKReplacer::~LRUKReplacer() {
 auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
   std::scoped_lock<std::mutex> lock(latch_);
   if (curr_size_ == 0) {
-    LOG_DEBUG("LRUKReplacer: [Evict] there is no frame evictable.");
+    if (LOG_ENABLE) {
+      LOG_DEBUG("LRUKReplacer: [Evict] there is no frame evictable.");
+    }
     return false;
   }
   bool in_history = true;
@@ -63,13 +65,16 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
   if (in_history) {
     history_frames_.erase(*frame_id);
     history_frame_size_--;
-    LOG_DEBUG("LRUKReplacer: Evict frame id %d from history list, after that size %zu.",
-              *frame_id, history_frame_size_);
+    if (LOG_ENABLE) {
+      LOG_DEBUG("LRUKReplacer: Evict frame id %d from history list, after that size %zu.", *frame_id,
+                history_frame_size_);
+    }
   } else {
     buffer_frames_.erase(*frame_id);
     buffer_frame_size_--;
-    LOG_DEBUG("LRUKReplacer: Evict frame id %d from cache list, after that size %zu.",
-              *frame_id, buffer_frame_size_);
+    if (LOG_ENABLE) {
+      LOG_DEBUG("LRUKReplacer: Evict frame id %d from cache list, after that size %zu.", *frame_id, buffer_frame_size_);
+    }
   }
   delete node;
   curr_size_--;
@@ -82,15 +87,17 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
   ListNode *node = GetNode(frame_id);
   if (node == nullptr) {
     if (history_frame_size_ + buffer_frame_size_ == replacer_size_) {
-      LOG_WARN("LRUKReplacer: replacer full, for %zu frames in history, %zu frames in cache.",
-               history_frame_size_, buffer_frame_size_);
+      LOG_WARN("LRUKReplacer: replacer full, for %zu frames in history, %zu frames in cache.", history_frame_size_,
+               buffer_frame_size_);
       return;
     }
     node = new ListNode(frame_id);
     InsertNode(history_dummy_, node);
     history_frames_[frame_id] = node;
     history_frame_size_++;
-    LOG_DEBUG("LRUKReplacer: Insert frame id %d into history list.", frame_id);
+    if (LOG_ENABLE) {
+      LOG_DEBUG("LRUKReplacer: Insert frame id %d into history list.", frame_id);
+    }
   }
   node->access_times_++;
   if (node->access_times_ == k_) {
@@ -100,16 +107,22 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
     InsertNode(buffer_dummy_, node);
     buffer_frames_[frame_id] = node;
     buffer_frame_size_++;
-    LOG_DEBUG("LRUKReplacer: Move frame id %d from history list to cache list.", frame_id);
+    if (LOG_ENABLE) {
+      LOG_DEBUG("LRUKReplacer: Move frame id %d from history list to cache list.", frame_id);
+    }
   } else {
     if (node->access_times_ < k_) {
       if (node->access_times_ != 1) {
         MoveNodeToHead(history_dummy_, node);
-        LOG_DEBUG("LRUKReplacer: Move frame id %d to head in history list.", frame_id);
+        if (LOG_ENABLE) {
+          LOG_DEBUG("LRUKReplacer: Move frame id %d to head in history list.", frame_id);
+        }
       }
     } else {
       MoveNodeToHead(buffer_dummy_, node);
-      LOG_DEBUG("LRUKReplacer: Move frame id %d to head in cache list.", frame_id);
+      if (LOG_ENABLE) {
+        LOG_DEBUG("LRUKReplacer: Move frame id %d to head in cache list.", frame_id);
+      }
     }
   }
 }
@@ -119,18 +132,22 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
   assert((size_t)frame_id <= replacer_size_);
   ListNode *node = GetNode(frame_id);
   if (node == nullptr) {
-    LOG_DEBUG("LRUKReplacer: [SetEvictable] node with frame id %d not exists.", frame_id);
+    if (LOG_ENABLE) {
+      LOG_DEBUG("LRUKReplacer: [SetEvictable] node with frame id %d not exists.", frame_id);
+    }
     return;
   }
   if (node->evictable_ == set_evictable) {
-    LOG_DEBUG("LRUKReplacer: [SetEvictable] node with frame id %d ecictable is %d.",
-              frame_id, set_evictable);
+    if (LOG_ENABLE) {
+      LOG_DEBUG("LRUKReplacer: [SetEvictable] node with frame id %d ecictable is %d.", frame_id, set_evictable);
+    }
     return;
   }
   node->evictable_ = set_evictable;
   curr_size_ += set_evictable ? 1 : -1;
-  LOG_DEBUG("LRUKReplacer: [SetEvictable] node with frame id %d has set ecictable to %d.",
-            frame_id, set_evictable);
+  if (LOG_ENABLE) {
+    LOG_DEBUG("LRUKReplacer: [SetEvictable] node with frame id %d has set ecictable to %d.", frame_id, set_evictable);
+  }
 }
 
 void LRUKReplacer::Remove(frame_id_t frame_id) {
@@ -138,7 +155,9 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
   assert((size_t)frame_id <= replacer_size_);
   ListNode *node = GetNode(frame_id);
   if (node == nullptr || !node->evictable_) {
-    LOG_DEBUG("LRUKReplacer: Remove frame id %d fails for not exists or non-evictable.", frame_id);
+    if (LOG_ENABLE) {
+      LOG_DEBUG("LRUKReplacer: Remove frame id %d fails for not exists or non-evictable.", frame_id);
+    }
     return;
   }
   EvictNodeFromList(node);
@@ -146,13 +165,17 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
   if (in_history) {
     history_frames_.erase(frame_id);
     history_frame_size_--;
-    LOG_DEBUG("LRUKReplacer: Remove frame id %d succeeds in history list, after that size %zu.",
-              frame_id, history_frame_size_);
+    if (LOG_ENABLE) {
+      LOG_DEBUG("LRUKReplacer: Remove frame id %d succeeds in history list, after that size %zu.", frame_id,
+                history_frame_size_);
+    }
   } else {
     buffer_frames_.erase(frame_id);
     buffer_frame_size_--;
-    LOG_DEBUG("LRUKReplacer: Remove frame id %d succeeds in cache list, after that size %zu.",
-              frame_id, buffer_frame_size_);
+    if (LOG_ENABLE) {
+      LOG_DEBUG("LRUKReplacer: Remove frame id %d succeeds in cache list, after that size %zu.", frame_id,
+                buffer_frame_size_);
+    }
   }
   delete node;
   curr_size_--;

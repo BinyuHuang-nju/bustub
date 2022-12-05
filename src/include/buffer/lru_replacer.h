@@ -63,7 +63,7 @@ class LRUReplacer : public Replacer {
   mutable std::mutex latch_;
   ListNode *dummy_node_;
   size_t cur_size_;
-  std::unordered_map<frame_id_t, ListNode*> frames_;
+  std::unordered_map<frame_id_t, ListNode *> frames_;
 };
 
 }  // namespace bustub

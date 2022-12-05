@@ -147,6 +147,8 @@ class BufferPoolManagerInstance : public BufferPoolManager {
   /** Bucket size for the extendible hash table */
   const size_t bucket_size_ = 4;
 
+  const frame_id_t INVALID_FRAME_ID = -1;
+
   /** Array of buffer pool pages. */
   Page *pages_;
   /** Pointer to the disk manager. */
@@ -177,5 +179,14 @@ class BufferPoolManagerInstance : public BufferPoolManager {
   }
 
   // TODO(student): You may add additional private members and helper functions
+  auto GetVictimPage() -> frame_id_t;
+
+  auto UpdateFrameInfo(frame_id_t frame_id, int pin_count) -> bool;
+
+  auto ResetPage(Page *page) -> bool;
+
+  auto InitPage(Page *page, frame_id_t frame_id, page_id_t page_id) -> bool;
+
+  void UnpinFrame(Page *page, frame_id_t frame_id);
 };
 }  // namespace bustub
