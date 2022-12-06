@@ -24,6 +24,18 @@
 
 namespace bustub {
 
+const bool LOG_LRU_ENABLE = false;
+#define LOG_LRU_DEBUG(...)                                                      \
+  do {                                                                          \
+    if (LOG_LRU_ENABLE) {                                                       \
+      OutputLogHeader(__SHORT_FILE__, __LINE__, __FUNCTION__, LOG_LEVEL_DEBUG); \
+      ::fprintf(LOG_OUTPUT_STREAM, __VA_ARGS__);                                \
+      fprintf(LOG_OUTPUT_STREAM, "\n");                                         \
+      ::fflush(stdout);                                                         \
+    }                                                                           \
+  } while(0)
+
+
 /**
  * LRUKReplacer implements the LRU-k replacement policy.
  *
@@ -170,7 +182,6 @@ class LRUKReplacer {
   std::unordered_map<frame_id_t, ListNode *> buffer_frames_;
   size_t buffer_frame_size_{0};
 
-  const bool LOG_ENABLE = false;
 };
 
 }  // namespace bustub

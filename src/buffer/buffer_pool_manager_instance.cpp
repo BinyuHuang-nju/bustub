@@ -48,16 +48,16 @@ auto BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) -> Page * {
   std::scoped_lock<std::mutex> lock(latch_);
   frame_id_t frame_id = GetVictimPage();
   if (frame_id == INVALID_FRAME_ID) {
-    LOG_DEBUG("BufferPoolManagerInstance: Create new page fails for no free frame, no evictable page.");
+    LOG_BP_DEBUG("BufferPoolManagerInstance: Create new page fails for no free frame, no evictable page.");
     return nullptr;
   }
   Page *page = &pages_[frame_id];
   *page_id = AllocatePage();
-  LOG_DEBUG("BufferPoolManagerInstance: Reset page with frame id %d, page id %d.", frame_id, page->page_id_);
+  LOG_BP_DEBUG("BufferPoolManagerInstance: Reset page with frame id %d, page id %d.", frame_id, page->page_id_);
   ResetPage(page);
   InitPage(page, frame_id, *page_id);
   UpdateFrameInfo(frame_id, page->pin_count_);
-  LOG_DEBUG("BufferPoolManagerInstance: Create page with frame id %d, page id %d.", frame_id, page->page_id_);
+  LOG_BP_DEBUG("BufferPoolManagerInstance: Create page with frame id %d, page id %d.", frame_id, page->page_id_);
   return page;
 }
 
@@ -69,21 +69,21 @@ auto BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) -> Page * {
     page = &pages_[frame_id];
     page->pin_count_++;
     UpdateFrameInfo(frame_id, page->pin_count_);
-    LOG_DEBUG("BufferPoolManagerInstance: Fetch page %d succeeds for already existing in buffer pool.", page_id);
+    LOG_BP_DEBUG("BufferPoolManagerInstance: Fetch page %d succeeds for already existing in buffer pool.", page_id);
     return page;
   }
   frame_id = GetVictimPage();
   if (frame_id == INVALID_FRAME_ID) {
-    LOG_DEBUG("BufferPoolManagerInstance: Fetch page %d fails for no free frame, no evictable page.", page_id);
+    LOG_BP_DEBUG("BufferPoolManagerInstance: Fetch page %d fails for no free frame, no evictable page.", page_id);
     return nullptr;
   }
   page = &pages_[frame_id];
-  LOG_DEBUG("BufferPoolManagerInstance: Reset page with frame id %d, page id %d.", frame_id, page_id);
+  LOG_BP_DEBUG("BufferPoolManagerInstance: Reset page with frame id %d, page id %d.", frame_id, page_id);
   ResetPage(page);
   InitPage(page, frame_id, page_id);
   disk_manager_->ReadPage(page_id, page->data_);  // after InitPage, only fetch page needs to load page data
   UpdateFrameInfo(frame_id, page->pin_count_);
-  LOG_DEBUG("BufferPoolManagerInstance: Fetch page with frame id %d, page id %d.", frame_id, page_id);
+  LOG_BP_DEBUG("BufferPoolManagerInstance: Fetch page with frame id %d, page id %d.", frame_id, page_id);
   return page;
 }
 
@@ -92,20 +92,20 @@ auto BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) -> 
   frame_id_t frame_id = INVALID_FRAME_ID;
   Page *page = nullptr;
   if (!page_table_->Find(page_id, frame_id)) {
-    LOG_DEBUG("BufferPoolManagerInstance: Unpin a page %d not in buffer pool.", page_id);
+    LOG_BP_DEBUG("BufferPoolManagerInstance: Unpin a page %d not in buffer pool.", page_id);
     return false;
   }
   page = &pages_[frame_id];
   assert(page->page_id_ == page_id);
   if (page->GetPinCount() == 0) {
-    LOG_DEBUG("BufferPoolManagerInstance: Unpin a page %d while its pin count is 0.", page_id);
+    LOG_BP_DEBUG("BufferPoolManagerInstance: Unpin a page %d while its pin count is 0.", page_id);
     return false;
   }
   UnpinFrame(page, frame_id);
   if (is_dirty) {
     page->is_dirty_ = true;
   }
-  LOG_DEBUG("BufferPoolManagerInstance: Unpin a page %d, and then its pin count is %d.", page_id, page->pin_count_);
+  LOG_BP_DEBUG("BufferPoolManagerInstance: Unpin a page %d, and then its pin count is %d.", page_id, page->pin_count_);
   return true;
 }
 
@@ -117,14 +117,14 @@ auto BufferPoolManagerInstance::FlushPgImp(page_id_t page_id) -> bool {
   frame_id_t frame_id = INVALID_FRAME_ID;
   Page *page = nullptr;
   if (!page_table_->Find(page_id, frame_id)) {
-    LOG_DEBUG("BufferPoolManagerInstance: Flush a page %d not in buffer pool.", page_id);
+    LOG_BP_DEBUG("BufferPoolManagerInstance: Flush a page %d not in buffer pool.", page_id);
     return false;
   }
   page = &pages_[frame_id];
   assert(page->page_id_ == page_id);
   disk_manager_->WritePage(page_id, page->GetData());
   page->is_dirty_ = false;
-  LOG_DEBUG("BufferPoolManagerInstance: Flush a page %d to disk.", page_id);
+  LOG_BP_DEBUG("BufferPoolManagerInstance: Flush a page %d to disk.", page_id);
   return true;
 }
 
@@ -138,7 +138,7 @@ void BufferPoolManagerInstance::FlushAllPgsImp() {
       page->is_dirty_ = false;
     }
   }
-  LOG_DEBUG("BufferPoolManagerInstance: Flush all pages to disk.");
+  LOG_BP_DEBUG("BufferPoolManagerInstance: Flush all pages to disk.");
 }
 
 auto BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) -> bool {
@@ -146,12 +146,12 @@ auto BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) -> bool {
   frame_id_t frame_id = INVALID_FRAME_ID;
   Page *page = nullptr;
   if (!page_table_->Find(page_id, frame_id)) {
-    LOG_DEBUG("BufferPoolManagerInstance: Delete page %d succeeds for not existing in buffer pool.", page_id);
+    LOG_BP_DEBUG("BufferPoolManagerInstance: Delete page %d succeeds for not existing in buffer pool.", page_id);
     return true;
   }
   page = &pages_[frame_id];
   if (page->GetPinCount() > 0) {
-    LOG_DEBUG("BufferPoolManagerInstance: Delete page %d fails for page being pinned.", page_id);
+    LOG_BP_DEBUG("BufferPoolManagerInstance: Delete page %d fails for page being pinned.", page_id);
     return false;
   }
   if (ResetPage(page)) {
@@ -159,7 +159,7 @@ auto BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) -> bool {
     replacer_->Remove(frame_id);
     free_list_.push_back(frame_id);
     DeallocatePage(page_id);
-    LOG_DEBUG("BufferPoolManagerInstance: Delete page %d succeeds.", page_id);
+    LOG_BP_DEBUG("BufferPoolManagerInstance: Delete page %d succeeds.", page_id);
     return true;
   }
   LOG_WARN("BufferPoolManagerInstance: Delete page %d fails for page not found.", page_id);
@@ -175,14 +175,14 @@ auto BufferPoolManagerInstance::GetVictimPage() -> frame_id_t {
     frame_id = free_list_.front();
     free_list_.pop_front();
     assert(pages_[frame_id].page_id_ == INVALID_PAGE_ID);
-    LOG_DEBUG("BufferPoolManagerInstance: Get victim page from free list with frame id %d.", frame_id);
+    LOG_BP_DEBUG("BufferPoolManagerInstance: Get victim page from free list with frame id %d.", frame_id);
     return frame_id;
   }
   if (replacer_->Evict(&frame_id)) {
-    LOG_DEBUG("BufferPoolManagerInstance: Get victim page by replacer with frame id %d.", frame_id);
+    LOG_BP_DEBUG("BufferPoolManagerInstance: Get victim page by replacer with frame id %d.", frame_id);
     return frame_id;
   }
-  LOG_DEBUG("BufferPoolManagerInstance: Get victim page fails.");
+  LOG_BP_DEBUG("BufferPoolManagerInstance: Get victim page fails.");
   return frame_id;
 }
 

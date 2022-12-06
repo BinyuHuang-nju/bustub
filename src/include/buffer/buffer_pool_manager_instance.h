@@ -26,6 +26,17 @@
 
 namespace bustub {
 
+const bool LOG_BP_ENABLE = true;
+#define LOG_BP_DEBUG(...)                                                       \
+  do {                                                                          \
+    if (LOG_BP_ENABLE) {                                                        \
+      OutputLogHeader(__SHORT_FILE__, __LINE__, __FUNCTION__, LOG_LEVEL_DEBUG); \
+      ::fprintf(LOG_OUTPUT_STREAM, __VA_ARGS__);                                \
+      fprintf(LOG_OUTPUT_STREAM, "\n");                                         \
+      ::fflush(stdout);                                                         \
+    }                                                                           \
+  } while(0)
+
 /**
  * BufferPoolManager reads disk pages to and from its internal buffer pool.
  */

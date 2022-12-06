@@ -29,6 +29,17 @@
 
 namespace bustub {
 
+const bool LOG_EXHASH_ENABLE = false;
+#define LOG_EXHASH_DEBUG(...)                                                   \
+  do {                                                                          \
+    if (LOG_EXHASH_ENABLE) {                                                    \
+      OutputLogHeader(__SHORT_FILE__, __LINE__, __FUNCTION__, LOG_LEVEL_DEBUG); \
+      ::fprintf(LOG_OUTPUT_STREAM, __VA_ARGS__);                                \
+      fprintf(LOG_OUTPUT_STREAM, "\n");                                         \
+      ::fflush(stdout);                                                         \
+    }                                                                           \
+  } while(0)
+
 /**
  * ExtendibleHashTable implements a hash table using the extendible hashing algorithm.
  * @tparam K key type
@@ -202,8 +213,6 @@ class ExtendibleHashTable : public HashTable<K, V> {
   int num_buckets_;     // The number of buckets in the hash table
   mutable std::mutex latch_;
   std::vector<std::shared_ptr<Bucket>> dir_;  // The directory of the hash table
-
-  const bool LOG_ENABLE = false;
 
   // The following functions are completely optional, you can delete them if you have your own ideas.
 
