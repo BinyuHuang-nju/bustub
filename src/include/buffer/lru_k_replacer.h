@@ -33,8 +33,7 @@ const bool LOG_LRU_ENABLE = false;
       fprintf(LOG_OUTPUT_STREAM, "\n");                                         \
       ::fflush(stdout);                                                         \
     }                                                                           \
-  } while(0)
-
+  } while (0)
 
 /**
  * LRUKReplacer implements the LRU-k replacement policy.
@@ -152,9 +151,9 @@ class LRUKReplacer {
     frame_id_t frame_id_;
     size_t access_times_;
     bool evictable_;
-    ListNode *prev_, *next_;
+    ListNode *prev_{nullptr}, *next_{nullptr};
 
-    ListNode() : frame_id_(-1), access_times_(0), evictable_(false), prev_(nullptr), next_(nullptr) {}
+    // ListNode() : frame_id_(-1), access_times_(0), evictable_(false), prev_(nullptr), next_(nullptr) {}
 
     explicit ListNode(frame_id_t id, ListNode *pre = nullptr, ListNode *nxt = nullptr)
         : frame_id_(id), access_times_(0), evictable_(false), prev_(pre), next_(nxt) {}
@@ -181,7 +180,6 @@ class LRUKReplacer {
   ListNode *buffer_dummy_;
   std::unordered_map<frame_id_t, ListNode *> buffer_frames_;
   size_t buffer_frame_size_{0};
-
 };
 
 }  // namespace bustub

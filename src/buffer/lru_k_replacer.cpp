@@ -64,11 +64,12 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
     history_frames_.erase(*frame_id);
     history_frame_size_--;
     LOG_LRU_DEBUG("LRUKReplacer: Evict frame id %d from history list, after that size %zu.", *frame_id,
-              history_frame_size_);
+                  history_frame_size_);
   } else {
     buffer_frames_.erase(*frame_id);
     buffer_frame_size_--;
-    LOG_LRU_DEBUG("LRUKReplacer: Evict frame id %d from cache list, after that size %zu.", *frame_id, buffer_frame_size_);
+    LOG_LRU_DEBUG("LRUKReplacer: Evict frame id %d from cache list, after that size %zu.", *frame_id,
+                  buffer_frame_size_);
   }
   delete node;
   curr_size_--;
@@ -144,12 +145,12 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
     history_frames_.erase(frame_id);
     history_frame_size_--;
     LOG_LRU_DEBUG("LRUKReplacer: Remove frame id %d succeeds in history list, after that size %zu.", frame_id,
-              history_frame_size_);
+                  history_frame_size_);
   } else {
     buffer_frames_.erase(frame_id);
     buffer_frame_size_--;
     LOG_LRU_DEBUG("LRUKReplacer: Remove frame id %d succeeds in cache list, after that size %zu.", frame_id,
-              buffer_frame_size_);
+                  buffer_frame_size_);
   }
   delete node;
   curr_size_--;

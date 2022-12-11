@@ -26,7 +26,7 @@
 
 namespace bustub {
 
-const bool LOG_BP_ENABLE = true;
+const bool LOG_BP_ENABLE = false;
 #define LOG_BP_DEBUG(...)                                                       \
   do {                                                                          \
     if (LOG_BP_ENABLE) {                                                        \
@@ -35,7 +35,9 @@ const bool LOG_BP_ENABLE = true;
       fprintf(LOG_OUTPUT_STREAM, "\n");                                         \
       ::fflush(stdout);                                                         \
     }                                                                           \
-  } while(0)
+  } while (0)
+
+const frame_id_t INVALID_FRAME_ID = -1;
 
 /**
  * BufferPoolManager reads disk pages to and from its internal buffer pool.
@@ -157,8 +159,6 @@ class BufferPoolManagerInstance : public BufferPoolManager {
   std::atomic<page_id_t> next_page_id_ = 0;
   /** Bucket size for the extendible hash table */
   const size_t bucket_size_ = 4;
-
-  const frame_id_t INVALID_FRAME_ID = -1;
 
   /** Array of buffer pool pages. */
   Page *pages_;

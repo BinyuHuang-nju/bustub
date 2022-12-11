@@ -38,7 +38,7 @@ const bool LOG_EXHASH_ENABLE = false;
       fprintf(LOG_OUTPUT_STREAM, "\n");                                         \
       ::fflush(stdout);                                                         \
     }                                                                           \
-  } while(0)
+  } while (0)
 
 /**
  * ExtendibleHashTable implements a hash table using the extendible hashing algorithm.

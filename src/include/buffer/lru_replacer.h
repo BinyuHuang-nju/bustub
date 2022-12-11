@@ -50,10 +50,10 @@ class LRUReplacer : public Replacer {
  private:
   // TODO(student): implement me!
   struct ListNode {
-    frame_id_t frame_id_;
-    ListNode *prev_, *next_;
+    frame_id_t frame_id_{0};
+    ListNode *prev_{nullptr}, *next_{nullptr};
 
-    ListNode() : frame_id_(0), prev_(nullptr), next_(nullptr) {}
+    // ListNode() : frame_id_(0), prev_(nullptr), next_(nullptr) {}
 
     explicit ListNode(frame_id_t id, ListNode *pre = nullptr, ListNode *nxt = nullptr)
         : frame_id_(id), prev_(pre), next_(nxt) {}

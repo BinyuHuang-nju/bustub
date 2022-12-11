@@ -112,7 +112,7 @@ void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
     bool success = bucket->Insert(key, value);
     if (!success) {
       LOG_EXHASH_DEBUG("ExtendibleHashTable: Insert bucket with index %zu and local depth %d is full.", bucket_no,
-                bucket->GetDepth());
+                       bucket->GetDepth());
       bucket->IncrementDepth();
       int local_depth = bucket->GetDepth();
       if (local_depth > global_depth_) {
@@ -120,11 +120,12 @@ void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
           dir_.push_back(dir_[i]);
         }
         global_depth_++;
-        LOG_EXHASH_DEBUG("ExtendibleHashTable: Global depth increments to %d for local depth increments.", global_depth_);
+        LOG_EXHASH_DEBUG("ExtendibleHashTable: Global depth increments to %d for local depth increments.",
+                         global_depth_);
       }
       size_t pair_index = PairIndex(bucket_no, local_depth);
       dir_[pair_index] = std::make_shared<Bucket>(bucket_size_, local_depth);
-      std::list<std::pair<K, V>> itemsToInsert = bucket->GetCopiedItems();
+      std::list<std::pair<K, V>> items_to_insert = bucket->GetCopiedItems();
       bucket->ClearItems();
       bucket->ReleaseWriteLock();
       size_t index_diff = 1 << local_depth;
@@ -137,16 +138,18 @@ void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
         LOG_EXHASH_DEBUG("ExtendibleHashTable: directory[%zu] points to directory[%zu].", i, pair_index);
         dir_[i] = dir_[pair_index];
       }
-      for (auto iter = itemsToInsert.begin(); iter != itemsToInsert.end(); iter++) {
+      for (auto iter = items_to_insert.begin(); iter != items_to_insert.end(); iter++) {
         size_t cur_bucket_no = IndexOf((*iter).first);
         dir_[cur_bucket_no]->GetWriteLock();
-        LOG_EXHASH_DEBUG("ExtendibleHashTable: For split, insert into bucket with index %zu and depth %d.", cur_bucket_no,
-                  dir_[cur_bucket_no]->GetDepth());
+        LOG_EXHASH_DEBUG("ExtendibleHashTable: For split, insert into bucket with index %zu and depth %d.",
+                         cur_bucket_no, dir_[cur_bucket_no]->GetDepth());
         if (!dir_[cur_bucket_no]->Insert((*iter).first, (*iter).second)) {
           LOG_WARN("ExtendibleHashTable: Split bucket but insert fail.");
         }
         dir_[cur_bucket_no]->ReleaseWriteLock();
       }
+      // incre num of buckets
+      num_buckets_++;
     } else {
       bucket->ReleaseWriteLock();
     }
